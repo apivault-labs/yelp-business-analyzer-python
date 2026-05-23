@@ -4,22 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yelp-business-analyzer"
-version = "0.1.0"
-description = "Python SDK for the Yelp Business Analyzer Apify actor — real-time ratings, structured hours, website tech stack, listing age & chain detection for any Yelp business."
+version = "0.2.0"
+description = "Python SDK for the Yelp Business Analyzer Apify actor — 40+ enrichment fields per Yelp business: real-time ratings, structured hours with timezone-aware is-open-now, 50+ website tech stack detection, real emails (with CloudFlare decoder), phones in E.164, 7 social profiles, JSON-LD, SEO + mobile audit, address parsing, lead score 0-100, industry-specific outreach pitches, and one-click outreach links (mailto/sms/WhatsApp/LinkedIn). Sales-ops ready. $0.003 per business."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "ApiVault Labs" }]
 keywords = [
     "yelp", "yelp-scraper", "yelp-api", "yelp-business-analyzer",
-    "yelp-ratings", "yelp-hours", "yelp-tech-stack", "yelp-fusion-alternative",
+    "yelp-fusion-alternative", "yelp-without-api-key",
+    "yelp-ratings-api", "yelp-hours-api", "yelp-tech-stack",
+    "yelp-leads", "yelp-emails", "yelp-phone-numbers",
     "local-business-intelligence", "local-lead-generation",
-    "restaurant-analytics", "business-hours-api", "is-open-now",
-    "chain-detection", "popularity-score",
+    "restaurant-analytics", "restaurant-api", "restaurant-tech-stack",
+    "lead-generation", "b2b-lead-gen", "crm-enrichment",
+    "lead-score", "outreach-automation", "cold-email",
+    "sales-intelligence", "sales-ops",
+    "is-open-now-api", "chain-detection", "popularity-score",
+    "hubspot-alternative", "apollo-alternative", "hunter-alternative",
     "web-scraping", "apify", "apify-actor", "python-sdk",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -27,6 +34,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Office/Business",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 requires-python = ">=3.9"
