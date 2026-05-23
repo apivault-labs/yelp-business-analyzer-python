@@ -18,39 +18,43 @@ CANDIDATES = [
     "https://www.yelp.com/biz/starbucks-san-francisco-100",
     "https://www.yelp.com/biz/in-n-out-burger-los-angeles",
     "https://www.yelp.com/biz/tartine-bakery-san-francisco",
+    "https://www.yelp.com/biz/zuni-cafe-san-francisco",
     "https://www.yelp.com/biz/the-french-laundry-yountville-3",
     "https://www.yelp.com/biz/momofuku-noodle-bar-new-york",
-    # Add more candidates here — paste 100s
 ]
 
 
 def main() -> None:
     client = YelpAnalyzerClient()
-    results = client.analyze(CANDIDATES, max_concurrency=3)
+    businesses, _ = client.analyze(
+        CANDIDATES,
+        max_concurrency=3,
+        # Server-side filter — drops chains before they hit your dataset
+        # exclude_chains=True,
+    )
 
-    chains: list[dict] = []
-    indies: list[dict] = []
-    unsure: list[dict] = []
+    # Or filter client-side after the fact:
+    chains = [
+        r for r in businesses
+        if r.get("success") and (r.get("chain_likelihood_score") or 0) >= 50
+    ]
+    indies = client.filter_independents(businesses)
+    unsure = [
+        r for r in businesses
+        if r.get("success")
+        and 25 <= (r.get("chain_likelihood_score") or 0) < 50
+    ]
 
-    for r in results:
-        if not r.get("success"):
-            continue
-        score = r.get("chain_likelihood_score", 0)
-        if score >= 50:
-            chains.append(r)
-        elif score < 25:
-            indies.append(r)
-        else:
-            unsure.append(r)
-
-    def _print(group: list[dict], label: str) -> None:
+    def _print(group, label):
         print(f"\n=== {label} ({len(group)}) ===")
         for r in group:
             score = r.get("chain_likelihood_score", 0)
             rating = r.get("rating_normalized") or "?"
             reviews = r.get("reviewsCount_int") or 0
             name = (r.get("businessName") or "(unknown)")[:40]
-            print(f"  {name:<40} chain={score:>3} \u2022 {rating}\u2b50 \u00d7 {reviews:,}")
+            lead = r.get("leadScore", "?")
+            print(f"  {name:<40}  chain={score:>3}  "
+                  f"{rating}\u2b50 \u00d7 {reviews:,}  lead={lead}")
 
     _print(indies, "INDEPENDENTS (recommended for boutique outreach)")
     _print(unsure, "UNCERTAIN (manual review)")
