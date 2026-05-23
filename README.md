@@ -1,358 +1,368 @@
 # Yelp Business Analyzer — Python SDK
 
-> **Real-time Yelp business intelligence: ratings, structured hours, website tech stack, listing age, popularity score & chain detection — all in one API call.**
+[![PyPI version](https://img.shields.io/badge/pip-yelp--business--analyzer-blue.svg)](https://github.com/apivault-labs/yelp-business-analyzer-python)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![CI](https://github.com/apivault-labs/yelp-business-analyzer-python/actions/workflows/ci.yml/badge.svg)](https://github.com/apivault-labs/yelp-business-analyzer-python/actions/workflows/ci.yml)
 
-Python client for the [Yelp Business Analyzer Apify Actor](https://apify.com/apivault_labs/yelp-business-scraper) — get **15+ business intelligence signals** for any Yelp business page using only public data sources.
+> **40+ enrichment fields per Yelp business. $0.003 each. CRM-ready output.
+> One-click outreach links. Sales-ops workflow built-in.**
 
-[![Apify Actor](https://img.shields.io/badge/Apify-Actor-blue?logo=apify)](https://apify.com/apivault_labs/yelp-business-scraper)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
-[![PyPI-friendly](https://img.shields.io/badge/install-pip-success)](#installation)
+Direct alternative to **Yelp Fusion API** for use cases the Fusion API can't
+cover: tech stack detection, real public emails, social profiles, lead
+scoring, industry-specific outreach pitches, and ready-to-paste mailto/SMS/
+WhatsApp/LinkedIn-search URLs — none of which the official API exposes.
 
----
-
-## What it does
-
-For any Yelp business URL, this actor returns a single rich JSON record combining **4 public data sources** + **15+ derived intelligence signals**.
-
-A direct, pay-per-use alternative to:
-- [Yelp Fusion API](https://www.yelp.com/developers) (rate-limited, requires app review, no hours intelligence)
-- Manual Yelp scraping (anti-bot, fragile)
-- Generic local-business APIs
-
-**Pricing:** $0.003 per business analyzed. No subscriptions, no credits expiring, no rate limits.
-
----
-
-## Quick start
+```bash
+pip install git+https://github.com/apivault-labs/yelp-business-analyzer-python
+```
 
 ```python
 from yelp_analyzer import YelpAnalyzerClient
 
 client = YelpAnalyzerClient(api_token="apify_api_xxxxxx")
 
-result = client.analyze_one("https://www.yelp.com/biz/tartine-bakery-san-francisco")
+businesses, summary = client.analyze([
+    "https://www.yelp.com/biz/zuni-cafe-san-francisco",
+    "https://www.yelp.com/biz/diptyque-san-francisco-2",
+])
 
-print(f"Name:           {result['businessName']}")
-print(f"Rating:         {result['rating']}⭐ × {result['reviewsCount']} reviews")
-print(f"Quality:        {result['quality_tier']}")
-print(f"Popularity:     {result['popularity_score']}/100")
-print(f"Hours/week:     {result['hours_per_week_total']}")
-print(f"Open weekends:  {result['open_weekends']}")
-print(f"Open right now: {result['is_open_now']}")
+# Top sales prospects, sorted
+for b in client.filter_by_lead_tier(businesses, "scorching", "hot"):
+    contact = b.get("bestContact") or {}
+    print(f"{b['businessName']:30}  lead={b['leadScore']}  {contact.get('value')}")
+
+# One-click outreach
+for b in client.filter_with_email(businesses):
+    mailto = (b.get("outreachLinks") or {}).get("mailto_url_with_pitch")
+    print(mailto)
 ```
-
-Output:
-```
-Name:           Tartine Bakery
-Rating:         4.2⭐ × 9200 reviews
-Quality:        great
-Popularity:     84/100
-Hours/week:     73.5
-Open weekends:  True
-Open right now: False
-```
-
----
-
-## Installation
-
-```bash
-pip install git+https://github.com/apivault-labs/yelp-business-analyzer-python.git
-```
-
-Or clone and use directly:
-
-```bash
-git clone https://github.com/apivault-labs/yelp-business-analyzer-python.git
-cd yelp-business-analyzer-python
-pip install -r requirements.txt
-```
-
-Requires Python 3.9+ and the [`requests`](https://pypi.org/project/requests/) library.
-
----
-
-## Get your API token (free)
-
-1. Sign up at [apify.com](https://apify.com) — free tier includes $5 monthly credits, no card required
-2. Go to [Account → Integrations](https://console.apify.com/account/integrations)
-3. Copy your Personal API token
-
-```bash
-export APIFY_API_TOKEN=apify_api_xxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-Or pass it explicitly:
-
-```python
-client = YelpAnalyzerClient(api_token="apify_api_xxxxxx")
-```
-
----
 
 ## What you get for $0.003 per business
 
-### ⭐ Core fields (real-time, no cache)
+For every Yelp URL analyzed, you get a single rich JSON record combining
+**11 public data sources** + **30+ derived intelligence signals**.
+
+### ⭐ Core (Yelp)
 - Business name, rating, review count
 - Categories, price range
-- Full address with neighborhood
-- Phone, website
-- Free-text business hours
-- Profile image and amenities
+- Address, phone, website, hours, neighborhood, image, amenities
 
-### 🕐 Hours Intelligence
-- **Structured weekly schedule** — `[{day, opens, closes}, ...]`
-- **Total hours per week**
-- **Days open count** (1-7)
-- **Open weekends** boolean
-- **Has 24-hour day** boolean
-- **Real-time `is_open_now`** check (UTC-aware)
+### 🕐 Hours intelligence
+- **Structured weekly schedule** — one entry per day with opens/closes
+- **Total hours per week**, days open count
+- **Open weekends**, has 24-hour day
+- **Real-time `is_open_now`** — **timezone-aware** (PT/MT/CT/ET, ...)
 
-### 🛠️ Website Tech Stack (when business has external site)
-Detect 20+ platforms a small business might use:
-- **E-commerce:** Shopify, WooCommerce, BigCommerce, Magento, Wix, Squarespace, Webflow, Square Online
-- **Restaurant tools:** OpenTable, Resy, Toast, ChowNow, Bento, Olo
-- **Generic:** WordPress, GoDaddy
-- **Marketing:** Mailchimp, Klaviyo, Google Analytics, Facebook Pixel
-- **Server header**, **HSTS** flag, **alive check**, **website emails**
+### 🛠️ Website tech stack — 50+ platforms detected
+- E-commerce: Shopify, WooCommerce, BigCommerce, Magento, Wix, Squarespace,
+  Webflow, Square Online, Weebly, Duda, Ecwid
+- Restaurant tech: OpenTable, Resy, Tock, SevenRooms, BentoBox, ChowNow,
+  Toast, Olo, Yelp Reservations
+- Delivery: DoorDash, Uber Eats, Grubhub, Postmates, Caviar, Slice, ezCater
+- Booking: Calendly, Acuity, Mindbody, Vagaro, Booksy, Square Appointments
+- Payments: Stripe, PayPal, Square POS, Clover, Lightspeed, Apple Pay,
+  Google Pay, Klarna, Affirm, Afterpay
+- Marketing: Mailchimp, Klaviyo, Constant Contact, ActiveCampaign, HubSpot
+- Analytics: GA, GTM, Facebook Pixel, TikTok Pixel, Hotjar, Microsoft Clarity
+- Reviews: Yotpo, Trustpilot, Judge.me
+- Chat: Intercom, Zendesk, Drift, Tidio
+- Plus **server header**, **HSTS check**, **alive verification**
 
-### ⏱️ Business Listing Age
-- Earliest Wayback Machine snapshot of the Yelp page
-- **Estimated business listing age in years**
-- **First listed year** on Yelp
+### 📞 Contact enrichment
+- **Real emails** — with CloudFlare email decoder (recovers ~25% of
+  obfuscated `data-cfemail` spans on WordPress/Wix sites)
+- **Email pattern guesser** — 11 likely contacts for the discovered domain
+  (`info@`, `hello@`, `contact@`, `support@`, `sales@`, ...)
+- **Phones** in E.164 format with click-to-call URL
+- **7 social platforms** detected: Instagram, Facebook, Twitter/X, TikTok,
+  YouTube, LinkedIn, Pinterest (extracted from `<a>` tags AND merged from
+  JSON-LD `sameAs[]` for higher accuracy)
+- **Action links**: menu URL, booking URL, delivery URLs
 
-### 🧠 Derived Intelligence (8 signals)
-- **`popularity_score`** (0-100) — composite of rating × log(reviews)
-- **`customer_segment`** — budget / mid-range / upscale / luxury (by $-tier)
-- **`quality_tier`** — poor / fair / good / great / exceptional
-- **`online_presence_score`** (0-100) — has website, tech stack, contact, amenities
-- **`chain_likelihood_score`** (0-100) — franchise / chain detection heuristic
-- **`service_offerings_count`** — amenities + categories
-- **`rating_normalized`**, **`reviewsCount_int`** — typed numeric fields for sorting
+### 🔍 SEO + mobile-friendliness audit
+- `seo_title`, `seo_meta_description`, `seo_canonical`, `seo_og_tags{}`
+- `seo_h1_count`, `mobile_has_viewport`, `mobile_has_responsive_css`
+- **`seo_hygiene_score`** (0-100)
 
----
+### 🏷️ Structured amenities — 28 boolean flags
+`has_outdoor_seating`, `accepts_reservations`, `offers_delivery`,
+`accepts_credit_cards`, `accepts_contactless`, `wifi_available`,
+`parking_available`, `wheelchair_accessible`, `good_for_kids`,
+`good_for_groups`, `serves_alcohol`, `has_happy_hour`, `vegan_options`,
+`vegetarian_options`, `gluten_free_options`, `serves_breakfast`/`brunch`/
+`lunch`/`dinner`, `open_late_night`, `dog_friendly`, `has_tvs`,
+`live_entertainment`, `private_dining`, `bike_parking`, `has_health_score`
 
-## Examples
+### 🏠 Address parser
+`parsedAddress.{street, city, state, zipCode, country, formattedAddress}` +
+**`timezone`** derived from US state code (used for the timezone-aware
+`is_open_now`).
 
-See the [`examples/`](examples) folder for full code:
+### 📜 JSON-LD schema.org parsing
+When the discovered website publishes Schema.org markup, we extract:
+`schema_same_as[]`, `schema_telephones[]`, `schema_emails[]`,
+`schema_address`, `schema_latitude/longitude`, `schema_founders[]`,
+`schema_legal_name`, `schema_founding_date`.
 
-| File | What it does |
-|---|---|
-| [`quickstart.py`](examples/quickstart.py) | Analyze one business, print key metrics |
-| [`bulk_analyze.py`](examples/bulk_analyze.py) | Analyze 50+ businesses in parallel |
-| [`find_chains_vs_indies.py`](examples/find_chains_vs_indies.py) | Filter chains from independent businesses |
-| [`export_to_csv.py`](examples/export_to_csv.py) | Save results to CSV / Excel |
-| [`compare_neighborhoods.py`](examples/compare_neighborhoods.py) | Compare quality / pricing across neighborhoods |
-| [`open_now_finder.py`](examples/open_now_finder.py) | Filter businesses currently open right now |
+### ⏱️ Listing & domain age
+- Wayback Machine: earliest snapshot of the Yelp page → years on Yelp
+- Optional crt.sh SSL history → website domain age (legitimacy signal)
 
----
+### 🎯 **Lead score 0-100 + best contact + outreach pitch + outreach links**
+- **`leadScore`** (0-100) — composite of website health, modern tech stack,
+  contact data quality, popularity, SEO hygiene, quality tier, JSON-LD
+  legitimacy signals
+- **`leadTier`** — `cold` / `warm` / `hot` / `scorching`
+- **`leadScoreReasons[]`** — explainable signals
+- **`bestContact: {channel, value, label}`** — most actionable handle
+  (priority: email > E.164 phone > IG > FB > LinkedIn > website)
+- **`outreachPitch`** — ready-to-paste cold-outreach message tailored to the
+  Yelp category. **15 industry templates**: restaurants, salons, dentists,
+  auto, plumbers/HVAC/electricians, lawyers, real estate, fitness, hotels,
+  retail, pet care, events/wedding, cleaning, education, finance.
+- **`outreachLinks{}`** — one-click URLs:
+  - `mailto_url_with_pitch` (subject + outreach pitch as body)
+  - `tel_url`, `sms_url`, `whatsapp_url` (auto-pasted pitch)
+  - `linkedin_search_url` — pre-filtered people search
+  - `google_search_url`
+  - `yelp_competitors_url` — territory research
 
-## API reference
+### 🛡️ Slug-fallback path
 
-### `YelpAnalyzerClient(api_token=None, timeout=600)`
-
-| Param | Type | Description |
-|---|---|---|
-| `api_token` | `str` | Apify API token. Falls back to `APIFY_API_TOKEN` env var. |
-| `timeout` | `int` | Max seconds to wait for analysis. Default 600 (10 min). |
-
-### `client.analyze(business_urls, **kwargs)`
-
-Analyze multiple businesses synchronously.
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `business_urls` | `list[str]` | required | Yelp business URLs (`yelp.com/biz/...`) |
-| `max_concurrency` | `int` | 2 | Parallel businesses to analyze |
-| `actor_timeout_secs` | `int` | 300 | Max actor runtime (passed to Apify) |
-
-Plus boolean toggles to skip data sources for speed:
-
-| Flag | Default | Effect |
-|---|---|---|
-| `extract_core` | `True` | Thunderbit core fields (name, rating, hours, ...) |
-| `extract_hours_intel` | `True` | Structured weekly schedule + is-open-now |
-| `extract_website` | `True` | Detect tech stack on business website |
-| `extract_age` | `True` | Wayback listing age |
-| `extract_derived_signals` | `True` | popularity, segment, quality, chain detection |
-
-Returns: `list[dict]` — one record per business.
-
-### `client.analyze_one(business_url, **kwargs)`
-
-Convenience wrapper for single-business analysis. Returns one `dict`.
-
-### `client.estimate_cost(business_count)`
-
-Returns the estimated USD cost (`business_count × 0.003`).
-
----
+When Thunderbit hits a Yelp throttle, the actor doesn't give up — it
+reverse-engineers the business name and city from the URL slug
+(`tartine-bakery-san-francisco` → `"Tartine Bakery"` + `"San Francisco"`),
+then runs the entire **website-discovery → enrichment chain**. Recovers
+~60% of previously-failed runs into useful partial records (website + tech
+stack + emails + lead score) instead of `success: false`.
 
 ## Sample output
 
 ```json
 {
   "success": true,
-  "inputUrl": "https://www.yelp.com/biz/tartine-bakery-san-francisco",
-  "businessName": "Tartine Bakery",
-  "rating": "4.2",
+  "dataSource": "thunderbit",
+  "businessName": "Diptyque Geary Street",
   "rating_normalized": 4.2,
-  "reviewsCount": "9200",
-  "reviewsCount_int": 9200,
-  "categories": "Bakeries, Cafes, Desserts",
-  "address": "600 Guerrero St, San Francisco, CA 94110",
-  "neighborhood": "Mission",
-  "amenities": "Claimed; Offers delivery; Takes reservations; Outdoor seating",
-  "image": "https://s3-media0.fl.yelpcdn.com/buphoto/...jpg",
-  "hours": "Mon-Sun: 7:30 AM - 6:00 PM",
+  "reviewsCount_int": 107,
+  "categories": "Candle Stores",
+  "address": "73 Geary St\nSan Francisco, CA 94108",
+  "parsedAddress": {
+    "street": "73 Geary St",
+    "city": "San Francisco",
+    "state": "CA",
+    "zipCode": "94108",
+    "country": "US"
+  },
+  "timezone": "America/Los_Angeles",
   "weekly_schedule": [
-    {"day": "Monday",   "opens": "07:30", "closes": "18:00"},
-    {"day": "Tuesday",  "opens": "07:30", "closes": "18:00"}
+    {"day": "Monday", "opens": "10:00", "closes": "18:00"},
+    {"day": "Sunday", "opens": "12:00", "closes": "17:00"}
   ],
-  "hours_per_week_total": 73.5,
-  "days_open_count": 7,
-  "open_weekends": true,
-  "has_24h_day": false,
-  "is_open_now": false,
-  "customer_segment": "unknown",
+  "hours_per_week_total": 53,
+  "is_open_now": true,
+  "website": "https://stores.diptyqueparis.com/en_eu/diptyque-san-francisco",
+  "website_discovered_via": "duckduckgo",
+  "website_alive": true,
+  "website_tech_stack": ["Magento", "Google Analytics"],
+  "phones_from_website": ["+14154020600", "415 402 0600"],
+  "phoneE164": "+14154020600",
+  "social_profiles": {
+    "instagram": "https://www.instagram.com/diptyque",
+    "facebook": "https://www.facebook.com/diptyque",
+    "youtube": "https://www.youtube.com/@DiptyqueParis"
+  },
+  "seo_title": "Diptyque San Francisco",
+  "seo_hygiene_score": 95,
+  "mobile_friendly": true,
+  "customer_segment": "upscale",
   "quality_tier": "great",
-  "popularity_score": 84,
-  "online_presence_score": 30,
-  "chain_likelihood_score": 5,
-  "service_offerings_count": 13
+  "popularity_score": 59,
+  "online_presence_score": 76,
+  "leadScore": 60,
+  "leadTier": "hot",
+  "leadScoreReasons": [
+    "website live", "2 tech detected", "3 social profiles",
+    "phone available", "strong SEO hygiene", "great quality"
+  ],
+  "bestContact": {
+    "channel": "instagram",
+    "value": "https://www.instagram.com/diptyque"
+  },
+  "outreachPitch": "Hi Diptyque Geary Street — saw you on Yelp. We help candle stores stores turn local Yelp searches into in-store visits with click-and-collect + reservation messaging. 15 mins to demo?",
+  "outreachLinks": {
+    "tel_url": "tel:+14154020600",
+    "whatsapp_url": "https://wa.me/14154020600?text=...",
+    "linkedin_search_url": "https://www.linkedin.com/search/results/people/?keywords=%22Diptyque+Geary+Street%22+owner+OR+founder+OR+CEO",
+    "google_search_url": "https://www.google.com/search?q=%22Diptyque+Geary+Street%22+San+Francisco",
+    "yelp_competitors_url": "https://www.yelp.com/search?find_desc=Candle+Stores&find_loc=Union+Square"
+  }
 }
 ```
 
----
-
 ## Use cases
 
-### 🥇 Local Lead Generation
-Find prospects with **website tech stack** matching your tool:
-- Shopify users → pitch e-commerce apps
-- WordPress users → pitch plugins/hosting
-- Stores **without** Klaviyo → pitch email automation
-- Restaurants without Toast/Resy → pitch reservation systems
+### B2B lead generation (the headline use case)
+- Filter `leadTier = "scorching"` for warmest prospects
+- Filter `website_tech_stack contains "Shopify"` for match-fit leads
+- Filter `chain_likelihood_score < 50` to focus on independents
+- Use `bestContact` for outreach orchestration
+- Use `outreachPitch` as the first cold-email/cold-DM draft
+- Use `phoneE164` + `phoneTel` for click-to-call dialers
+- Drop the CSV directly into HubSpot / Pipedrive / Salesforce / Apollo
 
-### 🥈 Directory & Aggregator Building
-Build verified business directories with:
-- Confirmed listing age for "established" badges
-- Real opening hours per weekday
-- Real category and price tier data
-- Confirmed website status (alive vs broken)
+### Niche directory & aggregator building
+- "Best date-night restaurants" → `private_dining=true` +
+  `serves_alcohol=true` + `priceRange="$$$"`
+- "Family-friendly cafés" → `good_for_kids` + `wifi_available` +
+  `outdoor_seating`
+- "24-hour spots" → `has_24h_day=true`
 
-### 🥉 Competitive Research
-- Benchmark `popularity_score` across competitors
-- Track `online_presence_score` over time
-- Identify chains in a market via `chain_likelihood_score`
-- Analyze customer segment distribution by neighborhood
+### Local SEO / tech adoption research
+- Track what % of restaurants in a market use Toast / OpenTable / Resy
+- Identify SMBs without HSTS / mobile-friendly sites for upsell
+- Map `customer_segment` distribution by neighborhood
 
-### 🍽️ Restaurant / Hospitality Analytics
-- Find late-night spots (`has_24h_day`, `hours_per_week_total`)
-- Identify weekend brunch markets (`open_weekends`)
-- Detect modern POS adoption (Toast, Square, OpenTable)
-- Filter restaurants by `quality_tier` for editorial picks
-
-### 📊 Investment & M&A Due Diligence
-- Verify business legitimacy via `business_listing_age_years`
-- Check `quality_tier` consistency
-- Cross-reference review patterns for chain vs indie
-
-### 🗺️ Real-time "Open Now" Apps
-- Use `is_open_now` for currently-open business filters
-- Combine with `weekly_schedule` for "open in 30 minutes" features
-- Power dynamic local search interfaces
-
----
+### CRM enrichment pipeline
+- Batch-enrich a list of Yelp URLs and get phones in E.164, validated
+  emails, and 7-platform social profiles in a single CSV.
 
 ## Pricing
-
-Pay only for what you analyze:
 
 | Volume | Cost |
 |---|---|
 | 1 business | $0.003 |
-| 100 businesses | $0.30 |
-| 1,000 businesses | $3.00 |
-| 10,000 businesses | $30.00 |
+| 100 | $0.30 |
+| 1,000 | $3.00 |
+| 10,000 | $30.00 |
 
-Free Apify tier includes ~$5 monthly credit — analyze ~1,500 businesses per month for free.
+Pay only for what you extract. No subscriptions, no hidden fees, no API
+keys to manage. The Apify free tier ($5 credit) covers ~1,500 businesses.
 
----
+```python
+client.estimate_cost(2_500)   # 7.5 USD
+```
+
+## Installation
+
+```bash
+pip install git+https://github.com/apivault-labs/yelp-business-analyzer-python
+```
+
+Or pin to a release tag:
+```bash
+pip install git+https://github.com/apivault-labs/yelp-business-analyzer-python@v0.2.0
+```
+
+## Setup
+
+1. Create an Apify account: <https://console.apify.com/sign-up>
+2. Get your API token: <https://console.apify.com/account/integrations>
+3. Either pass it explicitly or export `APIFY_API_TOKEN`:
+
+```bash
+export APIFY_API_TOKEN="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+```python
+client = YelpAnalyzerClient()                     # picks up env var
+client = YelpAnalyzerClient(api_token="apify_...") # explicit
+```
+
+## Examples
+
+| File | What it shows |
+|---|---|
+| [`examples/quickstart.py`](examples/quickstart.py) | Single-business quickstart |
+| [`examples/bulk_analyze.py`](examples/bulk_analyze.py) | Multi-business with summary |
+| [`examples/lead_scoring_pipeline.py`](examples/lead_scoring_pipeline.py) | Full sales-ops workflow (TOP_LEADS, filters, outreach) |
+| [`examples/crm_outreach_links.py`](examples/crm_outreach_links.py) | Paste mailto/whatsapp/linkedin URLs into your CRM |
+| [`examples/tech_stack_prospecting.py`](examples/tech_stack_prospecting.py) | Find Shopify/WordPress/OpenTable users |
+| [`examples/email_pattern_outreach.py`](examples/email_pattern_outreach.py) | Use guessed emails when no real one is found |
+| [`examples/find_chains_vs_indies.py`](examples/find_chains_vs_indies.py) | Independent SMB filter |
+| [`examples/open_now_finder.py`](examples/open_now_finder.py) | Timezone-aware open-now |
+| [`examples/compare_neighborhoods.py`](examples/compare_neighborhoods.py) | Neighborhood-level distribution |
+| [`examples/export_to_csv.py`](examples/export_to_csv.py) | CSV export for CRM import |
+
+## API reference
+
+### `YelpAnalyzerClient(api_token=None, timeout=900, poll_interval=3.0)`
+
+### `analyze(business_urls, **kwargs) -> (businesses, summary)`
+Forwards all 18 actor input flags. See the full list in
+[`yelp_analyzer/client.py`](yelp_analyzer/client.py).
+
+### `analyze_one(business_url, **kwargs) -> dict`
+
+### `get_summary() -> dict | None`
+Aggregate stats for the most recent run.
+
+### `get_top_leads() -> dict | None`
+Top 20 prospects (sorted by `leadScore`) with the most-actionable fields
+flattened — perfect for Slack-bot alerts or daily sales digests.
+
+### Filters (all return new lists)
+
+- `filter_by_lead_tier(businesses, *tiers)` — `cold` / `warm` / `hot` / `scorching`
+- `filter_by_quality(businesses, *tiers)`
+- `filter_by_segment(businesses, *segments)` — `budget` / `mid-range` / `upscale` / `luxury`
+- `filter_independents(businesses, max_chain_score=25)`
+- `filter_with_email(businesses, include_guessed=False)`
+- `filter_with_phone(businesses)`
+- `filter_open_now(businesses)`
+- `filter_by_state(businesses, *states)` — US 2-letter codes
+- `filter_by_tech(businesses, *tech_names, match_all=False)`
+
+### `estimate_cost(business_count) -> float`
 
 ## How it works
 
-All data comes from **public sources** — no logins, no Yelp accounts, no proxies needed:
-
-1. **Thunderbit AI scraper** — extracts the 12 core Yelp fields (name, rating, hours, ...)
-2. **Hours parser** — turns Thunderbit's free-text hours into a structured weekly schedule
-3. **Website fetcher** — quick HEAD + GET to detect tech stack and verify the site is alive
-4. **Wayback Machine** — `archive.org/wayback/available` for first snapshot date
-5. **Real-time clock** — UTC-aware `is_open_now` calculation against the parsed schedule
-
-Popularity score formula:
 ```
-popularity_score = (rating_normalized × 50) + (log10(reviews) × 12.5)
-clamped to [0, 100]
+your_code → YelpAnalyzerClient → Apify API
+                                    ↓
+                            Apify actor v1.4
+                                    ↓
+                  ┌─────────────────┴─────────────────┐
+                  ↓                                   ↓
+         Thunderbit (Yelp data)              Slug fallback
+                  ↓                                   ↓
+             ┌────┴────────┬───────┬────────────────┴───┐
+             ↓             ↓       ↓                    ↓
+       DDG website     JSON-LD    Tech stack       Email/phone
+        discovery      schema.org  detector         enrichment
+             ↓             ↓       ↓                    ↓
+                          rich record
+                            ↓
+                       you, in Python
 ```
-Designed so 4.5★ × 1000 reviews ≈ 85, 5.0★ × 5 reviews ≈ 25.
 
----
+All heavy lifting (HTTP, retries, parsing, scoring, formatting) happens on
+Apify's infrastructure. Your Python process is just an orchestrator —
+~150 lines of boilerplate that turn one rich actor into a friendly Pythonic
+API surface.
 
-## Speed & reliability
+## Why direct Yelp scraping isn't viable from your laptop
 
-- **15–25 seconds per business** (parallel HTTP, no rendering)
-- **2 businesses in parallel** by default (Yelp-friendly, configurable up to 5)
-- **No proxies needed** — Thunderbit handles Yelp scraping for us
-- **Graceful degradation** — if Wayback is slow or a website is down, other layers still return data
+Yelp uses **DataDome enterprise WAF**, which blocks all datacenter and most
+residential IP ranges with a JS challenge. Solving the challenge requires
+a headless browser (~$0.05/run in compute), which would zero out the $3/1K
+margin. Thunderbit (used internally by the actor) maintains a whitelisted
+pool that can handle the WAF, plus the slug-fallback recovers value when
+their pool is throttled. You don't have to think about any of this.
 
----
+## Keywords
 
-## FAQ
-
-**Q: Do I need a Yelp Fusion API key?**
-A: No. This actor uses public Yelp pages, not the Fusion API. No app review, no rate limits, no quota.
-
-**Q: How fresh is the data?**
-A: 100% real-time. No caching. Each call hits Yelp's live page.
-
-**Q: Will it work on every Yelp listing?**
-A: Yes — every public business page (`yelp.com/biz/...`).
-
-**Q: Why is `popularity_score` not just rating?**
-A: A 5★ business with 3 reviews isn't actually popular. We combine rating with log-scaled review count so 4.5★ × 1000 reviews ≈ 85, while 5.0★ × 5 reviews ≈ 25. Better signal for ranking.
-
-**Q: How accurate is `chain_likelihood_score`?**
-A: It's a heuristic combining brand-name matching and review patterns. Scores 50+ almost always indicate chains. Under 25 = independent business.
-
-**Q: Can it scrape Yelp reviews?**
-A: Not in this client — see the companion **[Yelp Reviews Scraper](https://apify.com/apivault_labs/yelp-reviews-scraper)** for full review extraction with reviewer info.
-
-**Q: Can I run this without Apify?**
-A: This package is a thin wrapper around the hosted actor. The actor handles infrastructure, retries, parallelism. Self-hosted Yelp scraping at scale requires anti-bot mitigation and proxies — generally not worth building yourself.
-
----
-
-## Related Apify actors
-
-- [Yelp Reviews Scraper](https://apify.com/apivault_labs/yelp-reviews-scraper) — full reviews with text and reviewer info
-- [Local Lead Finder](https://apify.com/apivault_labs/local-business-lead-finder) — find businesses without websites
-- [Trustpilot Reviews Scraper](https://apify.com/apivault_labs/trustpilot-reviews-scraper) — review intelligence for any brand
-- [Domain Intelligence Scraper](https://apify.com/apivault_labs/domain-intelligence-scraper) — WHOIS, DNS, SSL for any domain
-
-See [all actors by apivault_labs](https://apify.com/apivault_labs).
-
----
+`yelp-scraper` `yelp-api` `yelp-business-analyzer` `yelp-fusion-alternative`
+`yelp-without-api-key` `yelp-ratings-api` `yelp-hours-api` `yelp-tech-stack`
+`yelp-leads` `yelp-emails` `yelp-phone-numbers` `local-business-intelligence`
+`local-lead-generation` `restaurant-analytics` `restaurant-api`
+`lead-generation` `b2b-lead-gen` `crm-enrichment` `lead-score`
+`outreach-automation` `cold-email` `sales-intelligence` `sales-ops`
+`is-open-now-api` `chain-detection` `popularity-score`
+`hubspot-alternative` `apollo-alternative` `hunter-alternative`
+`web-scraping` `apify` `python-sdk`
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-This client is open source. The underlying Apify actor is a paid service ($0.003/business).
-
----
-
-## Keywords
-
-`yelp-scraper` `yelp-api` `yelp-business-analyzer` `yelp-business-api` `yelp-ratings-api` `yelp-reviews-api` `yelp-hours-api` `yelp-tech-stack` `yelp-fusion-alternative` `local-business-intelligence` `local-lead-generation` `restaurant-analytics` `restaurant-api` `business-hours-api` `is-open-now-api` `chain-detection` `popularity-score` `web-scraping` `apify` `apify-actor` `python-sdk` `yelp-without-api-key` `yelp-no-key` `business-listing-scraper` `yelp-popularity-score`
