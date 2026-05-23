@@ -1,10 +1,9 @@
 """
-Find Yelp businesses that are open RIGHT NOW.
+Find Yelp businesses that are open right now (timezone-aware).
 
-Uses the actor's UTC-aware ``is_open_now`` flag. Useful for:
-- Real-time "what's open" apps
-- Late-night spot finders
-- Hospitality operations dashboards
+The actor parses the address to extract the US state, derives the IANA
+timezone (PST/EST/CST/MST/...), and uses it to compute `is_open_now`
+correctly. No more "everything looks closed because we used UTC".
 
     export APIFY_API_TOKEN=apify_api_xxxxxx
     python examples/open_now_finder.py
@@ -14,53 +13,58 @@ from yelp_analyzer import YelpAnalyzerClient
 
 
 CANDIDATES = [
-    "https://www.yelp.com/biz/tartine-bakery-san-francisco",
-    "https://www.yelp.com/biz/in-n-out-burger-los-angeles",
-    "https://www.yelp.com/biz/joes-pizza-new-york-2",
-    "https://www.yelp.com/biz/momofuku-noodle-bar-new-york",
-    "https://www.yelp.com/biz/the-french-laundry-yountville-3",
+    "https://www.yelp.com/biz/tartine-bakery-san-francisco",      # CA — PT
+    "https://www.yelp.com/biz/zuni-cafe-san-francisco",           # CA — PT
+    "https://www.yelp.com/biz/momofuku-noodle-bar-new-york",      # NY — ET
+    "https://www.yelp.com/biz/franklin-barbecue-austin-2",        # TX — CT
+    "https://www.yelp.com/biz/the-french-laundry-yountville-3",   # CA — PT
 ]
 
 
 def main() -> None:
     client = YelpAnalyzerClient()
-    # Skip slow optional layers when you only need open-now status
-    results = client.analyze(
-        CANDIDATES,
-        max_concurrency=3,
-        extract_age=False,
-        extract_website=False,
-    )
+    businesses, _ = client.analyze(CANDIDATES, max_concurrency=3)
 
-    open_now = []
-    closed_but_open_today = []
-    closed = []
+    open_now = client.filter_open_now(businesses)
+    closed = [r for r in businesses
+              if r.get("success") and r.get("is_open_now") is False]
+    unknown = [r for r in businesses
+               if r.get("success") and r.get("is_open_now") is None]
 
-    for r in results:
-        if not r.get("success"):
-            continue
-        if r.get("is_open_now"):
-            open_now.append(r)
-            continue
-        # Was the day-of-week's window in the schedule even today?
-        days_open = r.get("days_open_count") or 0
-        if days_open >= 6:
-            closed_but_open_today.append(r)
-        else:
-            closed.append(r)
-
-    print(f"\n=== OPEN RIGHT NOW ({len(open_now)}) ===")
+    print(f"\n=== OPEN NOW ({len(open_now)}) ===")
     for r in open_now:
-        print(f"  {r['businessName']:<35} {r.get('hours_per_week_total')}h/wk")
+        tz = r.get("timezone", "?")
+        name = (r.get("businessName") or "?")[:40]
+        rating = r.get("rating_normalized") or "?"
+        print(f"  ✅ {name:<40}  {rating}\u2b50  {tz}")
 
-    print(f"\n=== CLOSED NOW (regular hours / quiet day) ({len(closed_but_open_today)}) ===")
-    for r in closed_but_open_today:
-        print(f"  {r['businessName']:<35} {r.get('hours_per_week_total')}h/wk")
+    print(f"\n=== CLOSED ({len(closed)}) ===")
+    for r in closed:
+        tz = r.get("timezone", "?")
+        name = (r.get("businessName") or "?")[:40]
+        # Show today's hours so the user can see when it'll open
+        schedule = r.get("weekly_schedule") or []
+        today_hours = "—"
+        from datetime import datetime
+        try:
+            from zoneinfo import ZoneInfo
+            today_idx = datetime.now(ZoneInfo(tz)).weekday() if tz else 0
+        except Exception:
+            today_idx = 0
+        DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday",
+                     "Friday", "Saturday", "Sunday"]
+        today_name = DAY_NAMES[today_idx]
+        for entry in schedule:
+            if entry.get("day") == today_name:
+                today_hours = f"{entry['opens']}-{entry['closes']}"
+                break
+        print(f"  ❌ {name:<40}  today: {today_hours}  ({tz})")
 
-    if closed:
-        print(f"\n=== UNDER 6 DAYS/WEEK ({len(closed)}) ===")
-        for r in closed:
-            print(f"  {r['businessName']:<35} days_open={r.get('days_open_count')}")
+    if unknown:
+        print(f"\n=== UNKNOWN ({len(unknown)}) ===")
+        for r in unknown:
+            print(f"  ? {(r.get('businessName') or '?')[:40]}  "
+                  "(no schedule data)")
 
 
 if __name__ == "__main__":
