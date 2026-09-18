@@ -128,21 +128,19 @@ When the discovered website publishes Schema.org markup, we extract:
   - `google_search_url`
   - `yelp_competitors_url` — territory research
 
-### 🛡️ Slug-fallback path
+### 🛡️ Resilient partial results
 
-When Thunderbit hits a Yelp throttle, the actor doesn't give up — it
-reverse-engineers the business name and city from the URL slug
-(`tartine-bakery-san-francisco` → `"Tartine Bakery"` + `"San Francisco"`),
-then runs the entire **website-discovery → enrichment chain**. Recovers
-~60% of previously-failed runs into useful partial records (website + tech
-stack + emails + lead score) instead of `success: false`.
+When a public listing cannot be fully collected, the Actor can derive basic
+identity details from the supplied URL and continue contact and website
+enrichment. Coverage varies, but useful partial records can still be returned
+instead of a failed result.
 
 ## Sample output
 
 ```json
 {
   "success": true,
-  "dataSource": "thunderbit",
+  "dataSource": "hosted",
   "businessName": "Diptyque Geary Street",
   "rating_normalized": 4.2,
   "reviewsCount_int": 107,
@@ -262,7 +260,7 @@ pip install git+https://github.com/apivault-labs/yelp-business-analyzer-python@v
 3. Either pass it explicitly or export `APIFY_API_TOKEN`:
 
 ```bash
-export APIFY_API_TOKEN="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export APIFY_API_TOKEN="YOUR_APIFY_TOKEN"
 ```
 
 ```python
@@ -325,7 +323,7 @@ your_code → YelpAnalyzerClient → Apify API
                                     ↓
                   ┌─────────────────┴─────────────────┐
                   ↓                                   ↓
-         Thunderbit (Yelp data)              Slug fallback
+         Hosted Actor collection                  Partial-result path
                   ↓                                   ↓
              ┌────┴────────┬───────┬────────────────┴───┐
              ↓             ↓       ↓                    ↓
@@ -342,14 +340,11 @@ Apify's infrastructure. Your Python process is just an orchestrator —
 ~150 lines of boilerplate that turn one rich actor into a friendly Pythonic
 API surface.
 
-## Why direct Yelp scraping isn't viable from your laptop
+## Why use the hosted Actor
 
-Yelp uses **DataDome enterprise WAF**, which blocks all datacenter and most
-residential IP ranges with a JS challenge. Solving the challenge requires
-a headless browser (~$0.05/run in compute), which would zero out the $3/1K
-margin. Thunderbit (used internally by the actor) maintains a whitelisted
-pool that can handle the WAF, plus the slug-fallback recovers value when
-their pool is throttled. You don't have to think about any of this.
+The SDK sends input to the published Apify Actor, waits for completion, and
+reads the resulting Dataset. Collection, retries, and enrichment remain
+server-side and are not included in this repository.
 
 ## Keywords
 
