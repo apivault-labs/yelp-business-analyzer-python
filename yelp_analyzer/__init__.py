@@ -35,7 +35,7 @@ Returns per business:
 - **outreachPitch**: industry-specific cold-outreach (15 industries)
 - **outreachLinks**: one-click mailto/tel/sms/WhatsApp/LinkedIn-search/
   Google-search/Yelp-competitors URLs
-- Slug fallback: when Yelp throttles Thunderbit, the actor still recovers
+- Slug fallback: when the primary extraction route is throttled, the actor recovers
   business name + city from the URL slug and runs all website-based
   enrichment — giving you usable leads instead of `success: false`
 
