@@ -16,7 +16,7 @@ def main() -> None:
     rec = client.analyze_one(url)
 
     print(f"\n=== {rec.get('businessName', '(unknown)')} ===")
-    print(f"  Source:            {rec.get('dataSource', 'thunderbit')}")
+    print(f"  Source:            {rec.get('dataSource', 'hosted')}")
     rating = rec.get("rating_normalized") or rec.get("rating") or "?"
     reviews = rec.get("reviewsCount_int") or rec.get("reviewsCount") or "?"
     print(f"  Rating:            {rating}\u2b50  \u00d7 {reviews} reviews")
