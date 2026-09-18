@@ -31,15 +31,12 @@ between actor v1.0 and v1.4.
 - `filter_by_tech(businesses, *tech_names, match_all=False)` — match against
   the website tech stack (case-insensitive substring)
 
-### Added — 14 new input parameters
+### Added — 13 new input parameters
 
 `analyze()` now forwards every actor input flag from v1.4:
 
-- `thunderbit_retries` — tunable retry count when Thunderbit hits transient
-  block (Yelp throttle)
-- `slug_fallback_on_fail` — when Thunderbit gives up, derive the business
-  name from the URL slug and run the website-discovery + enrichment
-  layers anyway. Recovers ~60% of failed runs into useful partial records.
+- `slug_fallback_on_fail` — return useful partial identity and enrichment data
+  when a listing cannot be fully collected
 - `website_discovery_fallback` — DuckDuckGo lookup when Yelp doesn't
   expose the website
 - `extract_contact_enrichment` — emails (with CloudFlare decoder),
@@ -74,8 +71,7 @@ between actor v1.0 and v1.4.
 
 ### Changed
 
-- Default `timeout` raised from 600s → 900s to accommodate Thunderbit
-  retries on Yelp-throttled URLs.
+- Default `timeout` raised from 600s → 900s for longer hosted runs.
 - `analyze_one()` keeps backward-compatible signature but no longer
   attempts to write a summary (single-URL runs don't need one).
 
