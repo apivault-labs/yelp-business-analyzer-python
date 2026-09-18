@@ -30,7 +30,6 @@ def main() -> None:
     businesses, summary = client.analyze(
         BUSINESSES,
         max_concurrency=3,
-        thunderbit_retries=2,
         slug_fallback_on_fail=True,   # recover from Yelp throttle
     )
 
@@ -47,7 +46,7 @@ def main() -> None:
         pop = r.get("popularity_score") or "-"
         lead = r.get("leadScore") or 0
         tier = r.get("leadTier") or "?"
-        src = r.get("dataSource", "thunderbit")
+        src = r.get("dataSource", "hosted")
         print(f"{name:<35} {str(rating):>7} {str(pop):>4} {lead:>5} {tier:>10}  {src}")
 
     # Aggregate summary (free, lives in the run's KV store)
