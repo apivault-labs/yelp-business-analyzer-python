@@ -2,8 +2,8 @@
 YelpAnalyzerClient — synchronous wrapper around the Apify
 ``apivault_labs/yelp-business-scraper`` actor (v1.4).
 
-The actor handles all heavy work (Thunderbit + retry, slug-based fallback
-when Yelp throttles, DuckDuckGo website discovery, tech-stack detection
+The actor handles all heavy work (collection, retries, partial-result fallback,
+website discovery, tech-stack detection
 across 50+ platforms, CloudFlare email decoder, JSON-LD schema.org parsing,
 SEO + mobile audit, address parsing with timezone derivation, lead score,
 industry-specific outreach pitch generation, and one-click outreach links)
@@ -62,7 +62,7 @@ class YelpAnalyzerClient:
         ``APIFY_API_TOKEN`` environment variable.
     timeout : int, optional
         Maximum seconds to wait for an actor run to finish. Default 900
-        (15 min) — typical runs finish in 15-60 seconds, but Thunderbit
+        (15 min) — typical runs finish in 15-60 seconds, but extraction
         retries on a throttled Yelp pool can extend the tail.
     poll_interval : float, optional
         Seconds between status polls. Default 3.
@@ -106,7 +106,6 @@ class YelpAnalyzerClient:
         *,
         max_concurrency: int = 2,
         timeout_per_business: int = 180,
-        thunderbit_retries: int = 2,
         slug_fallback_on_fail: bool = True,
         extract_core: bool = True,
         extract_hours_intel: bool = True,
@@ -153,7 +152,6 @@ class YelpAnalyzerClient:
             "businessUrls": urls,
             "maxConcurrency": max(1, min(5, int(max_concurrency))),
             "timeout": max(60, min(300, int(timeout_per_business))),
-            "thunderbitRetries": max(0, min(5, int(thunderbit_retries))),
             "slugFallbackOnFail": bool(slug_fallback_on_fail),
             "extractCore": bool(extract_core),
             "extractHoursIntel": bool(extract_hours_intel),
