@@ -35,7 +35,6 @@ def main() -> None:
     businesses, summary = client.analyze(
         YELP_URLS,
         max_concurrency=3,
-        thunderbit_retries=2,
         slug_fallback_on_fail=True,
         # Strict prospecting: drop chains, keep only those with website
         exclude_chains=False,  # toggle on for SMB-only campaigns
